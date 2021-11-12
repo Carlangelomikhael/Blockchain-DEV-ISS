@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100&display=swap');
+
+*{
+margin: 0px;
+padding: 0px;
+box-sizing: border-box;
+}
+
+nav{
+display: flex;
+justify-content: space-around;
+align-items: center;
+min-height: 8vh;
+background-color: white;
+font-family: 'Poppins', sans-serif;
+border: 8px solid crimson;
+}
+
+.nav-links{
+display: flex;
+justify-content: space-around;
+width: 40%;
+}
+
+.nav-links li,.nav-active{
+list-style: none;
+}
+
+.nav-links a{
+color: black;
+text-decoration: none;
+letter-spacing: 3px;
+font-weight: bold;
+font-size: 18px;
+}
+
+.nav-links a:hover{
+color: crimson;
+}
+
+
+@media screen and (max-width:1024px){
+.nav-links{
+display: flex;
+justify-content: space-around;
+width: 50%;
+}
+}
+
+.card1 {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  width: 500px;
+  height: 430px;
+  margin: auto;
+  text-align: left;
+  font-family: arial;
+  position:relative;
+  top: 40px;
+  right: 300px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.card2 {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  width: 500px;
+  height: 200px;
+  margin: auto;
+  text-align: left;
+  font-family: arial;
+  position:fixed;
+  top: 143px;
+  right: 250px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.card3 {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  width: 500px;
+  height: 100px;
+  margin: auto;
+  text-align: left;
+  font-family: arial;
+  position:fixed;
+  top: 358px;
+  right: 250px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.title {
+  color: Crimson;
+  font-size: 28px;
+  text-align: center;
+}
+
+button {
+  border: none;
+  outline: 0;
+  display: inline-block;
+  padding: 8px;
+  color: white;
+  background-color: #000;
+  text-align: center;
+  cursor: pointer;
+  width: 100%;
+  font-size: 18px;
+  position: absolute;
+  top: 163px;
+  right: 0px;
+}
+
+a {
+  text-decoration: none;
+  font-size: 22px;
+  color: black;
+}
+
+button:hover, a:hover {
+  opacity: 0.7;
+}
+
+p {
+font-size: 22px;
+padding-top:5px;
+}
+
+.new-transaction{
+ text-decoration: none;
+ font-size: 22px;
+ color: white;
+}
+
+.Blockchain-copy{
+position: relative;
+top: 14px;
+right: 10px;
+width: 104.4%;
+}
+
+.alert{
+padding-top:5px;
+color: Crimson;
+}
+
+.card2, div{
+padding-top:10px;
+}
+
+.title1 {
+  color: Crimson;
+  font-size: 24px;
+  text-align: center;
+}
