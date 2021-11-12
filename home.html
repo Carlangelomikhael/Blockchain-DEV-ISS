@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav>
+    <div class="logo">
+        <img src="/static/iss.png" alt="Iss logo" width="180" height="70">
+    </div>
+    <ul class = "nav-links">
+        <li>
+            <a href="{{url_for('get_chain')}}">Chain Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('get_existing_nodes')}}">Nodes Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('get_pending_transactions')}}">Pending Transactions Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('mine_unconfirmed_transactions')}}">Mining Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('logout')}}">Log out</a>
+        </li>
+    </ul>
+</nav>
+
+<div class="card1">
+    <p class="title">Your Wallet<br/></p>
+    <div>
+        <p>ISS coin amount: {{session.get('node_money_amount')}}<br/></p>
+    </div>
+    <div>
+        <p>ISS pending coin amount: {{session.get('pending_money_amount')}}<br/></p>
+    </div>
+    <div>
+        <p>Recent transactions:<br/></p>
+    </div>
+    <div>
+        <p>
+            {% if not transaction_list%}
+            No Unconfirmed Transactions
+            {% else %}
+            {% for transaction in transaction_list%}
+            {{transaction}}<br/>
+            {% endfor %}
+            {% endif %}
+
+        </p>
+    </div>
+
+</div>
+
+<div class="card2">
+    <p class="title">New Transaction</p>
+    <form method="post">
+        <div>
+            <label id="name"><b>The Receiver's Full Name</b></label>
+            <input type="text" placeholder="Enter The Receiver's Full name" name="Receiver" required>
+        </div>
+
+        <div>
+            <label id="amount"><b>The Amount You Want to Send</b></label>
+            <input type="text" placeholder="Enter The Amount You Want to Send" name="Amount" required>
+        </div>
+        {% for message in get_flashed_messages() %}
+        <div class="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+        <a class="new-transaction"><button>Submit Transaction</button></a>
+    </form>
+
+</div>
+
+<div class="card3">
+    {% if up_to_date%}
+    <p class="title1">Your Blockchain Copy Is Up To Date</p>
+    {% else %}
+    <p class="title1">Your Blockchain Copy Is Not Up To Date</p>
+    {% endif %}
+        <p></p>
+        <a href="{{url_for('download_file')}}"><button class="Blockchain-copy">Update Your Blockchain Copy</button></a>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<style>
+  div {
+  display: inline-block;
+  border: 2px solid crimson;
+  padding: 10px;
+  margin: 5px;
+}
+</style>
+  <body>
+  {% if not page%}
+
+  {% for transaction in object_list%}
+  <div>{{transaction}}</div><br/>
+  {% endfor %}
+
+  {% else %}
+
+  {% for node in object_list%}
+  <div>The node number #{{node.id}} is {{node.name}} registered on {{node.timestamp}}</div><br/>
+  {% endfor %}
+
+  {% endif %}
+  </body>
+</html>

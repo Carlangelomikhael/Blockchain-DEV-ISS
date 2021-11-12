@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav>
+    <div class="logo">
+        <img src="/static/iss.png" alt="Iss logo" width="180" height="70">
+    </div>
+    <ul class = "nav-links">
+        <li>
+            <a href="{{url_for('get_chain')}}">Chain Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('register_node')}}">Sign Up Page</a>
+        </li>
+        <li>
+            <a href="{{url_for('signin_page')}}">Sign In Page</a>
+        </li>
+    </ul>
+</nav>
+</body>
+</html>
