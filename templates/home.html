@@ -20,9 +20,6 @@
             <a href="{{url_for('get_pending_transactions')}}">Pending Transactions Page</a>
         </li>
         <li>
-            <a href="{{url_for('mine_unconfirmed_transactions')}}">Mining Page</a>
-        </li>
-        <li>
             <a href="{{url_for('logout')}}">Log out</a>
         </li>
     </ul>
@@ -82,8 +79,6 @@
     {% else %}
     <p class="title1">Your Blockchain Copy Is Not Up To Date</p>
     {% endif %}
-        <p></p>
-        <a href="{{url_for('download_file')}}"><button class="Blockchain-copy">Update Your Blockchain Copy</button></a>
 </div>
 
 
