@@ -20,6 +20,7 @@ class Block:
         self.transaction = transaction
         self.timestamp = timestamp
         self.previous_hash = previous_hash
+        self.hash = hash
         self.nonce = nonce
 
     # Function that take as an input all the block's attributes
@@ -37,7 +38,7 @@ class Block:
 
 # Blockchain Class with it's basic attributes
 class Blockchain:
-    # Arbitrary difficulty of our PoW algorithm (i recommend to change it between 4 and 6)
+    # Arbitrary difficulty of our PoW algorithm (i recommend to change it between 4 and 7)
     diff = 5
 
     def __init__(self):
@@ -45,97 +46,24 @@ class Blockchain:
         self.chain = []
 
     # Function that creates the genesis block
-    # and adds it to the blockchain
+    # and adds it to the chain
     def create_genesis_block(self):
         # 0 index, no transactions, the block's timestamp, the block's previous hash (0 because non existent)
-        genesis_block = Block(0, b'', time.time(), "0")
+        genesis_block = Block(0, "", time.time(), "0")
         # Calculating the genesis block hash
         genesis_block.hash = genesis_block.compute_hash()
         # Appending the genesis block to the blockchain list
         self.chain.append(genesis_block)
         # Creating a Block_data object (Object of the Block table in the database)
-        elmnt = Block_data(0, "", genesis_block.timestamp, "0", 0, genesis_block.hash)
-
-        return elmnt
-
-    # Getter method
-    @property
-    # Function that gets the last block in the blockchain
-    def last_block(self):
-        return self.chain[-1]
-
-    # Function that adds new transactions to the unconfirmed transactions list
-    def add_new_transaction(self, transaction):
-        self.unconfirmed_transactions.append(transaction)
-
-    # Function that mines a block
-    def mine(self):
-
-        last_block = self.last_block
-
-        # Creating new block
-        new_block = Block(index=last_block.index + 1,
-                          transaction=self.unconfirmed_transactions[0],
-                          timestamp=time.time(),
-                          previous_hash=last_block.hash)
-
-        # Proof is the returned computed hash from the PoW algorithm
-        proof = self.proof_of_work(new_block)
-        # Adding the newly mined block with it's hash to the blockchain
-        self.add_block(new_block, proof)
-        return True
-
-    # Function that adds a block to the blockchain
-    def add_block(self, block, proof):
-
-        previous_hash = self.last_block.hash
-
-        # Verifying if the previous hash referred in the block
-        # and the hash of latest block in the chain match
-        if previous_hash != block.previous_hash:
-            return False
-
-        # Verifying if the proof is valid
-        if not self.is_valid_proof(block, proof):
-            return False
-
-        # Adding the block's hash
-        block.hash = proof
-        self.chain.append(block)
-        return True
-
-    # POW algorithm
-    def proof_of_work(self, block):
-        # Initialising the block's nonce
-        block.nonce = 0
-        # Computed hash with nonce = 0
-        computed_hash = block.compute_hash()
-
-        # While loop that that increments the value of the nonce to get a hash
-        # that satisfies our difficulty criteria
-        # the criteria it's how many zero's the computed hash starts with
-        # if diff = 4 we want a hash that starts with 4 zeros
-        while not computed_hash.startswith('0' * self.diff):
-            block.nonce += 1
-            # Recalculating the hash with different nonce (different input) => (different output/hash)
-            computed_hash = block.compute_hash()
-            # Uncomment the below print statement to visualise the computed hashes (it will slow down the code eventually)
-            '''print(computed_hash)'''
-        return computed_hash
-
-    # Function that checks if the proof is valid
-    def is_valid_proof(self, block, block_hash):
-
-        # Check if the block's hash is valid and satisfies
-        # the difficulty criteria.
-        return (block_hash.startswith('0' * self.diff) and
-                block_hash == block.compute_hash())
+        return Block_data(0, "", genesis_block.timestamp, "0", 0, genesis_block.hash)
 
 
 # Node Class with it's basic attributes
 # The person's id, the node's index, when he registered, how much currency he holds
+# the node's RSA public key
 # the node's password (encypted with sha256)
-# and the newest_chain_copy attribute (takes 2 values: 0 or 1/ 0 = not newest chain copy , 1 = newest chain copy)
+# and the newest_chain_copy attribute (takes 2 values: 0 or 1/ 0 = old chain copy , 1 = newest chain copy)
+# pending money sent (unconfirmed transaction)
 class Node:
     def __init__(self, node_id, nodes_number, timestamp, money_amount, pubkey, password, newest_chain_copy,
                  pending_money_amount):
@@ -148,15 +76,18 @@ class Node:
         self.newest_chain_copy = newest_chain_copy
         self.pending_money_amount = pending_money_amount
 
+    # Function that computes and sets the node's id
+    def compute_node_id(self, name, number_of_node, timestamp):
+        node_id = b''
+        node_id += name.encode()
+        node_id += (str(number_of_node)).encode()
+        node_id += (str(timestamp)).encode()
+        self.node_id = sha256(node_id).hexdigest()
 
-class Unconfirmed_Transaction:
-    def __init__(self, inputs, outputs, signature, transaction_id):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.signature = signature
-        self.transaction_id = transaction_id
 
-
+# Transaction Class with it's basic attributes
+# the transactions inputs and outputs
+# the sender signature of the transaction and the transaction id
 class Transaction:
     def __init__(self, inputs, outputs, signature, transaction_id):
         self.inputs = inputs
@@ -164,34 +95,113 @@ class Transaction:
         self.signature = signature
         self.transaction_id = transaction_id
 
+    # Function that computes and sets the transaction's id
+    def compute_transaction_id(self, transaction_sender, transaction_receiver, timestamp, transaction_amount):
+        transaction_string = transaction_sender + transaction_receiver + str(timestamp) + str(transaction_amount)
+        self.transaction_id = (sha256(transaction_string.encode())).hexdigest()
+
+
+# Database Class that queries,adds,deletes and updates any data desired
+# on our defined classes (Blocks,Nodes,Unconfirmed and Confirmed Transactions) in the database
+class Database:
+
+    # Function that adds element to the database
+    @staticmethod
+    def add_element(elmnt):
+        db.session.add(elmnt)
+        db.session.commit()
+
+    # Function that queries the database and return a list of all the blocks (Block_data objects)
+    @staticmethod
+    def get_chain_data():
+        return db.session.query(Block_data).all()
+
+    # Function that queries the database and return a list of all the nodes (Nodes_data objects)
+    @staticmethod
+    def get_nodes():
+        return db.session.query(Nodes_data).all()
+
+    # Function that queries the database and return a list of all the unconfirmed transaction (Unconfirmed_transactions objects)
+    @staticmethod
+    def get_unconf_tx():
+        unconf_transactions = db.session.query(Unconfirmed_transactions).all()
+        unconf_tx_list = []
+        for transaction in unconf_transactions:
+            unconf_tx_list.append(transaction.transaction_id)
+        return unconf_tx_list
+
+    # Function that queries the database and return a list of all the blocks (Block_data objects)
+    # then we iterate through the returned list and we reconstruct the blockchain's list of blocks by reconstructing every block object
+    # and adding them to the chain
+    def get_blockchain(self):
+        chain = []
+        # Retrieving the chain from the database
+        chain_data = self.get_chain_data()
+        # Iterating through the list
+        for blocks in chain_data:
+            # Calling the reconstruct_block function defined above
+            block = Block(blocks.index, blocks.transactions, blocks.timestamp, blocks.previous_hash, blocks.nonce)
+            block.hash = blocks.hash
+            chain.append(block.__dict__)
+        return chain
+
+    # Function that creates and then adds an unconfirmed transaction to the database
+    @staticmethod
+    def add_unconfirmed_transactions(tx):
+        # Creating a Unconfirmed_transactions object with transaction (tx) as an attribute
+        new_transaction = Unconfirmed_transactions(tx.inputs, tx.outputs,
+                                                   tx.signature, tx.transaction_id)
+        database.add_element(new_transaction)
+        db.session.commit()
+
+    # Function that update the newest_chain_copy attribute of the all the Nodes objects to 0
+    def change_chain_copy_status_all(self):
+        # Querying the nodes from database (list of Nodes_data objects)
+        nodes_list = self.get_nodes()
+        # Iterating through the list and updating the newest_chain_copy values
+        for node in nodes_list:
+            node.newest_chain_copy = 0
+            db.session.commit()
+
+    # Function that update the newest_chain_copy attribute of the specified Node object to 1
+    @staticmethod
+    def node_change_chain_copy_status(node_name):
+        # Querying the specified node from database (filtered by the node's name)
+        node = Nodes_data.query.filter_by(name=node_name).first()
+        # updating the newest_chain_copy value
+        node.newest_chain_copy = 1
+        db.session.commit()
+
+    # Function that query the newest_chain_copy value attribute of the specified Node object then returning it
+    @staticmethod
+    def get_chain_copy_status(node_id):
+        # Querying the specified node from database (filtered by the node's name)
+        node = Nodes_data.query.filter_by(node_id=node_id).first()
+        status = node.newest_chain_copy
+        return status
+
+    # Function that updates the sender's money amount in his active wallet and in his pending transferred money
+    # the money is pending and won't be sent until their is a block mined containing the transaction
+    @staticmethod
+    def update_node_money(transaction_sender, transaction_amount):
+        # Querying the sender node from database
+        node = Nodes_data.query.filter_by(node_id=transaction_sender).first()
+        # Updating the balances
+        node.money_amount -= (int(transaction_amount) + 0.05 * int(transaction_amount))
+        node.pending_money_amount += int(transaction_amount) + 0.05 * int(transaction_amount)
+        db.session.commit()
+        # Updating the session data
+        session['node_money_amount'] = node.money_amount
+        session['pending_money_amount'] = node.pending_money_amount
+
 
 # Flask app initialisation
 # Templates is the template folder containing all the html/css
 app = Flask(__name__, template_folder="templates")
 
-
-# Function That Reconstructs The Blockchain Chain
-def reconstruct_blockchain():
-    blockchain.chain = []
-    # Querying the full chain from the database (list containing Block_data objects)
-    # from the database and transforming it to a list containing Block objects and returning it
-    chain_data = get_chain_data()
-    for blocks in chain_data:
-        reconstructed_block = reconstruct_block(blocks.index, blocks.transactions, blocks.timestamp,
-                                                blocks.previous_hash, blocks.nonce, blocks.hash)
-        blockchain.chain.append(reconstructed_block)
-    return blockchain.chain
-
-
-# Function That Reconstructs The Block Object (creating a Block object and returning it)
-def reconstruct_block(index, transactions, timestamp, previous_hash, nonce, block_hash):
-    block = Block(index, transactions, timestamp, previous_hash, nonce)
-    block.hash = block_hash
-    return block
-
-
 # Initialize the Blockchain object
 blockchain = Blockchain()
+database = Database()
 
 # Our application's configurations:
 # The database relative path and it's type (sqlite)
@@ -281,7 +291,7 @@ class Transactions(db.Model):
         self.transaction_id = transaction_id
 
 
-# Unconfirmed_transactions Class with it's basic attributes
+# Unconfirmed transaction Class with it's basic attributes
 # id is an obligatory attribute set by the database
 # we have the serialized transaction object
 class Unconfirmed_transactions(db.Model):
@@ -299,162 +309,6 @@ class Unconfirmed_transactions(db.Model):
         self.transaction_id = transaction_id
 
 
-# Function that adds element to the database
-def add_element(elmnt):
-    db.session.add(elmnt)
-    db.session.commit()
-
-
-# Function that queries the database and return a list of all the blocks (Block_data objects)
-def get_chain_data():
-    return db.session.query(Block_data).all()
-
-
-# Function that queries the database and return a list of all the nodes (Nodes_data objects)
-def get_nodes():
-    return db.session.query(Nodes_data).all()
-
-
-# Function that queries the database and return a list of all the unconfirmed transaction (Unconfirmed_transactions objects)
-# then we iterate through the returned list and we de-serialize the objects (because they are stored in bytes)
-# by using pickle.loads and we return the new list containing de-serialized Unconfirmed_transactions objects
-def get_unconf_tx():
-    unconf_transactions = db.session.query(Unconfirmed_transactions).all()
-    unconf_tx_list = []
-    for transaction in unconf_transactions:
-        unconf_tx_list.append(transaction.transaction_id)
-    return unconf_tx_list
-
-
-# Function that queries the database and return a list of all the blocks (Block_data objects)
-# then we iterate through the returned list and we reconstruct the blockchain by reconstructing every block object
-# and adding them to the chain attribute of the Blockchain object
-def get_blockchain():
-    chain = []
-    # Retrieving the chain from the database
-    chain_data = get_chain_data()
-    # Iterating through the list
-    for blocks in chain_data:
-        # Calling the reconstruct_block function defined above
-        reconstructed_block = reconstruct_block(blocks.index, blocks.transactions, blocks.timestamp,
-                                                blocks.previous_hash, blocks.nonce, blocks.hash)
-        chain.append(reconstructed_block.__dict__)
-    return chain
-
-
-# Function that creates and then adds an unconfirmed transaction to the database
-def add_unconfirmed_transactions(tx):
-    # Creating a Unconfirmed_transactions object with transaction (tx) as an attribute
-    new_transaction = Unconfirmed_transactions(tx.inputs, tx.outputs,
-                                               tx.signature, tx.transaction_id)
-    add_element(new_transaction)
-    db.session.commit()
-
-
-# Function that deletes an unconfirmed transaction from the database
-def delete_unconfirmed_transactions():
-    # querying the first Unconfirmed_Transactions object then deleting it
-    unconf_tx_to_delete = db.session.query(Unconfirmed_transactions).first()
-    db.session.delete(unconf_tx_to_delete)
-    db.session.commit()
-
-
-# Function that computes the transaction id with sha256 encoding
-def compute_transaction_id(transaction_sender, transaction_receiver, timestamp, transaction_amount):
-    transaction_string = transaction_sender + transaction_receiver + str(timestamp) + str(transaction_amount)
-    return (sha256(transaction_string.encode())).hexdigest()
-
-
-# Function that update the newest_chain_copy attribute of the all the Nodes objects to 0
-def change_chain_copy_status_all():
-    # Querying the nodes from database (list of Nodes_data objects)
-    nodes_list = get_nodes()
-    # Iterating through the list and updating the newest_chain_copy values
-    for node in nodes_list:
-        node.newest_chain_copy = 0
-        db.session.commit()
-
-
-# Function that update the newest_chain_copy attribute of the specified Node object to 1
-def node_change_chain_copy_status(node_name):
-    # Querying the specified node from database (filtered by the node's name)
-    node = Nodes_data.query.filter_by(name=node_name).first()
-    # updating the newest_chain_copy value
-    node.newest_chain_copy = 1
-    db.session.commit()
-
-
-# Function that query the newest_chain_copy value attribute of the specified Node object then returning it
-def get_chain_copy_status(node_id):
-    # Querying the specified node from database (filtered by the node's name)
-    node = Nodes_data.query.filter_by(node_id=node_id).first()
-    status = node.newest_chain_copy
-    return status
-
-
-# Function that gets the transaction sender , receiver and the amount from the transaction id and return them in a list
-# by iterating through the list of registered nodes and computing every pair of nodes (sender and receiver)
-# to get the right transaction id
-def get_sender_receiver_amount():
-    # Getting the first transaction in the database (transaction that will be saved in the next mined block)
-    transaction = db.session.query(Unconfirmed_transactions).first()
-    # Querying the database and getting the list of the nodes
-    nodes_list = get_nodes()
-    # Iterating through the list
-    for node1 in nodes_list:
-        for node2 in nodes_list:
-            if node1.name != node2.name:
-                transaction_sender = node1.name
-                transaction_receiver = node2.name
-                result = sha256((transaction_sender + transaction_receiver).encode()).hexdigest()
-                index = transaction.transaction_id.find('/')
-                amount = transaction.transaction_id[index + 1:]
-                # Checking if transaction id and the computed sha256 string match
-                if result == transaction.transaction_id[:index]:
-                    return [transaction_sender, transaction_receiver, amount]
-
-
-# Function that queries the sender and receiver node of a transaction
-# and update their balances and pending money (the sender's pending money is sent to the receiver's wallet)
-def change_money_amount(list, block_miner):
-    # Querying the specified nodes (sender and receiver and the block miner imputed in the fct args)
-    # from database (filtered by the node's name)
-    sender = Nodes_data.query.filter_by(name=list[0]).first()
-    receiver = Nodes_data.query.filter_by(name=list[1]).first()
-    miner = Nodes_data.query.filter_by(name=block_miner).first()
-    # Updating the balances (miner gets 10% of the transaction amount)
-    sender.pending_money_amount -= int(list[2])
-    receiver.money_amount += float(0.9 * int(list[2]))
-    miner.money_amount += float(0.1 * int(list[2]))
-    db.session.commit()
-    # Updating the session data
-    session['node_money_amount'] = sender.money_amount
-    session['pending_money_amount'] = sender.pending_money_amount
-
-
-# Function that updates the sender's money amount in his active wallet and in his pending transferred money
-# the money is pending and won't be sent until their is a block mined containing the transaction
-def update_node_money(transaction_sender, transaction_amount):
-    # Querying the sender node from database
-    node = Nodes_data.query.filter_by(node_id=transaction_sender).first()
-    # Updating the balances
-    node.money_amount -= int(transaction_amount)
-    node.pending_money_amount += int(transaction_amount)
-    db.session.commit()
-    # Updating the session data
-    session['node_money_amount'] = node.money_amount
-    session['pending_money_amount'] = node.pending_money_amount
-
-
-def get_node_id(name, number_of_node, timestamp):
-    node_id = b''
-    node_id += name.encode()
-    node_id += (str(number_of_node)).encode()
-    node_id += (str(timestamp)).encode()
-
-    return sha256(node_id).hexdigest()
-
-
 ''' Warning: the following if statement will launch an error
  if the database is non existent, follow the steps below to create the database:
  - comment out the code below (*)
@@ -469,7 +323,7 @@ def get_node_id(name, number_of_node, timestamp):
 # If statement that checks if the Block_data table is empty
 # and creates the genesis block if it's empty
 if not db.session.query(Block_data).all():
-    add_element(blockchain.create_genesis_block())
+    database.add_element(blockchain.create_genesis_block())
     db.session.commit()
     db.session.close()
 '''*'''
@@ -478,7 +332,7 @@ if not db.session.query(Block_data).all():
 # endpoint to return the full chain of our blockchain object
 @app.route('/chain', methods=['GET'])
 def get_chain():
-    return render_template('blockchain_chain.html', blockchain_chain=get_blockchain())
+    return render_template('blockchain_chain.html', blockchain_chain=database.get_blockchain())
 
 
 # endpoint to get all pending (unconfirmed) transactions
@@ -486,25 +340,25 @@ def get_chain():
 def get_pending_transactions():
     # Checking if the user is logged in
     if session.get('logged_in'):
-        if not get_unconf_tx():
+        if not database.get_unconf_tx():
             return "No pending transactions"
         else:
-            return render_template('display_page.html', page=0, object_list=get_unconf_tx())
+            return render_template('display_page.html', page=0, object_list=database.get_unconf_tx())
     else:
         # If user is not logged in we throw a flash warning and redirect him to the signup page
         flash("WARNING: You can't access the pending transactions page without logging in")
         return redirect(url_for('register_node'))
 
 
-# endpoint to get all pending (unconfirmed) transactions
+# endpoint to get all registered nodes
 @app.route('/nodes')
 def get_existing_nodes():
     # Checking if the user is logged in
     if session.get('logged_in'):
-        if not get_nodes():
+        if not database.get_nodes():
             return "No pending transactions"
         else:
-            return render_template('display_page.html', page=1, object_list=get_nodes())
+            return render_template('display_page.html', page=1, object_list=database.get_nodes())
     else:
         # If user is not logged in we throw a flash warning and redirect him to the signup page
         flash("WARNING: You can't access the pending transactions page without logging in")
@@ -520,25 +374,27 @@ def register_node():
         name = request.form['Name'].strip()
         password = request.form['Psw'].strip()
         password_repeat = request.form['Psw-repeat'].strip()
-        node_list = get_nodes()
+        node_list = database.get_nodes()
 
         if password == password_repeat:
 
             # Creating a node class object
             number_of_node = len(node_list) + 1
             timestamp = time.time()
-            node_id = get_node_id(name, number_of_node, timestamp)
 
-            node = Node(node_id, number_of_node, timestamp, 100, b'', password, 0, 0)
+            # Initialising the node object with node id set at 0
+            node = Node(0, number_of_node, timestamp, 100, b'', password, 0, 0)
+            # Calculating the node id
+            node.compute_node_id(name, number_of_node, timestamp)
 
             # Creating a node_data class object
             # and adding it to the database
             node_data = Nodes_data(node.node_id, node.timestamp, node.money_amount, node.pubkey,
                                    node.password, node.newest_chain_copy, node.pending_money_amount)
-            add_element(node_data)
+            database.add_element(node_data)
 
             # Updating all the node's newest_chain_copy values in the database
-            change_chain_copy_status_all()
+            database.change_chain_copy_status_all()
 
             # Setting the session permanent (1 hour in our case)
             session.permanent = True
@@ -561,7 +417,7 @@ def register_node():
             return redirect(url_for('register_node'))
 
 
-# endpoint to signin as a node
+# endpoint to sign in as a node
 @app.route('/signin', methods=['GET', 'POST'])
 def signin_page():
     if request.method == 'GET':
@@ -573,7 +429,7 @@ def signin_page():
         password = request.form['Psw'].strip()
 
         # Querying the database and returning a list of all the nodes (Nodes_data objects)
-        node_list = get_nodes()
+        node_list = database.get_nodes()
         # Checking if node with the inserted name exists
         # Checking if inserted data (in the form) match
         if node_list:
@@ -608,8 +464,7 @@ def signin_page():
             return redirect(url_for('register_node'))
 
 
-# endpoint to download the database containing the blockchain, the registered nodes
-# and the unconfirmed transactions
+# endpoint to download the database
 @app.route('/download')
 def download_file():
     # Checking if the user is logged in
@@ -621,7 +476,7 @@ def download_file():
         node_id = session.get('node_id')
         try:
             # Updating the value of the node's newest_chain_copy attribute
-            node_change_chain_copy_status(node_id)
+            database.node_change_chain_copy_status(node_id)
             file_path = 'C:/Users/User/Downloads/database.db'
             # Checking if the file exists , if true we delete it (old copy)
             if os.path.exists(file_path):
@@ -711,7 +566,7 @@ def home():
 
             # Returning the home.html template with args to be displayed
             return render_template('home.html', transaction_list=session.get('transactions'),
-                                   up_to_date=get_chain_copy_status(node_id))
+                                   up_to_date=database.get_chain_copy_status(node_id))
 
         if request.method == 'POST':
             # Getting the transaction data and storing it in session values
@@ -728,7 +583,7 @@ def home():
                 # Setting the receiver value to 0 ( 0 = the receiver node is not registered , 1 = the receiver node is registered)
                 receiver = 0
                 # Querying the nodes from database (list of Nodes_data objects)
-                nodes = get_nodes()
+                nodes = database.get_nodes()
                 # Checking if the receiver is a registered node
                 for node in nodes:
                     if transaction_receiver == node.node_id:
@@ -763,37 +618,29 @@ def home():
                                    transaction_amount),
                                "receiver": transaction_receiver, "amount": int(transaction_amount)}
 
-                    unconfirmed_transaction = Unconfirmed_Transaction(json.dumps(inputs), json.dumps(outputs),
-                                                                      signature,
-                                                                      compute_transaction_id(transaction_sender,
-                                                                                             transaction_receiver,
-                                                                                             time.time(),
-                                                                                             transaction_amount))
+                    # Creating a transaction instance with transaction id set to 0
+                    transaction = Transaction(json.dumps(inputs), json.dumps(outputs), signature, 0)
+                    # Calculating the transaction id
+                    transaction.compute_transaction_id(transaction_sender, transaction_receiver,
+                                                       time.time(), transaction_amount)
 
-                    # Querying the database for the unconfirmed transactions list (list of Unconfirmed_Transactions objects)
-                    # saving it in the blockchain's chain attribute
-                    blockchain.unconfirmed_transactions = get_unconf_tx()
-                    # Adding the new transaction to the blockchain's chain
-                    blockchain.add_new_transaction(unconfirmed_transaction)
                     # Adding the new transaction to the Unconfirmed_Transactions table in the database
-                    add_unconfirmed_transactions(unconfirmed_transaction)
+                    database.add_unconfirmed_transactions(transaction)
 
                     session['transactions'].append(outputs)
 
                     # Updating all the node's newest_chain_copy values in the database
-                    change_chain_copy_status_all()
+                    database.change_chain_copy_status_all()
 
                     # Updating the sender's balances
-                    update_node_money(transaction_sender, transaction_amount)
+                    database.update_node_money(transaction_sender, transaction_amount)
 
                     # If all the transaction data is valid we throw a flash message
                     # saying that the transaction is pending (waiting for a node to mine a block containing the transaction)
                     flash("Pending Transaction")
                     # Returning the home.html template with args to be displayed
                     return render_template('home.html', transaction_list=session.get('transactions'),
-                                           up_to_date=get_chain_copy_status((session.get('node_id'))))
-
-                # return redirect(url_for('home'))
+                                           up_to_date=database.get_chain_copy_status((session.get('node_id'))))
 
                 # If user submits a new transaction and the receiving node doesn't exist
                 flash("Error: The Node You Are Trying To Send Money To Doesn't Exist")
@@ -809,4 +656,5 @@ def home():
 # as you to view the app and interact with the blockchain (create user, send transaction ...)
 if __name__ == '__main__':
     app.run(host="0.0.0.0")
+
 
