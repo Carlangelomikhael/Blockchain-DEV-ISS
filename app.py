@@ -4,7 +4,7 @@ from datetime import timedelta
 from hashlib import sha256
 from flask import Flask, request, render_template, session, url_for, redirect, send_from_directory, flash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, text
 import rsa
 import pickle
 import secrets
@@ -15,12 +15,12 @@ import os.path
 # We have the block's index, transaction (between nodes) , timestamp (when it was created)
 # the hash of the previous block and the nonce (number used once)
 class Block:
-    def __init__(self, index, transaction, timestamp, previous_hash, nonce=0):
+    def __init__(self, index, transaction, timestamp, previous_hash, block_hash, nonce=0):
         self.index = index
         self.transaction = transaction
         self.timestamp = timestamp
         self.previous_hash = previous_hash
-        self.hash = hash
+        self.hash = block_hash
         self.nonce = nonce
 
     # Function that take as an input all the block's attributes
@@ -35,27 +35,16 @@ class Block:
         # hexdigest() => Returns the encoded data in hexadecimal format
         return (sha256(block_string.encode())).hexdigest()
 
-
-# Blockchain Class with it's basic attributes
-class Blockchain:
-    # Arbitrary difficulty of our PoW algorithm (i recommend to change it between 4 and 7)
-    diff = 5
-
-    def __init__(self):
-        self.unconfirmed_transactions = []
-        self.chain = []
-
     # Function that creates the genesis block
     # and adds it to the chain
-    def create_genesis_block(self):
+    @staticmethod
+    def create_genesis_block():
         # 0 index, no transactions, the block's timestamp, the block's previous hash (0 because non existent)
-        genesis_block = Block(0, "", time.time(), "0")
+        genesis_block = Block(0, "", time.time(), "0", 0)
         # Calculating the genesis block hash
         genesis_block.hash = genesis_block.compute_hash()
-        # Appending the genesis block to the blockchain list
-        self.chain.append(genesis_block)
         # Creating a Block_data object (Object of the Block table in the database)
-        return Block_data(0, "", genesis_block.timestamp, "0", 0, genesis_block.hash)
+        return Block_data(0, "", genesis_block.timestamp, "0", genesis_block.hash, 0)
 
 
 # Node Class with it's basic attributes
@@ -65,10 +54,10 @@ class Blockchain:
 # and the newest_chain_copy attribute (takes 2 values: 0 or 1/ 0 = old chain copy , 1 = newest chain copy)
 # pending money sent (unconfirmed transaction)
 class Node:
-    def __init__(self, node_id, nodes_number, timestamp, money_amount, pubkey, password, newest_chain_copy,
+    def __init__(self, index, node_id, timestamp, money_amount, pubkey, password, newest_chain_copy,
                  pending_money_amount):
+        self.index = index
         self.node_id = node_id
-        self.nodes_number = nodes_number
         self.timestamp = timestamp
         self.money_amount = money_amount
         self.pubkey = pubkey
@@ -121,10 +110,15 @@ class Database:
     def get_nodes():
         return db.session.query(Nodes_data).all()
 
+    # Function that queries the database and return the last Nodes_data object
+    @staticmethod
+    def get_last_node():
+        return db.session.query(Nodes_data).order_by(text("id desc")).first()
+
     # Function that queries the database and return a list of all the unconfirmed transaction (Unconfirmed_transactions objects)
     @staticmethod
     def get_unconf_tx():
-        unconf_transactions = db.session.query(Unconfirmed_transactions).all()
+        unconf_transactions = db.session.query(Unconfirmed_Transactions).all()
         unconf_tx_list = []
         for transaction in unconf_transactions:
             unconf_tx_list.append(transaction.transaction_id)
@@ -149,7 +143,7 @@ class Database:
     @staticmethod
     def add_unconfirmed_transactions(tx):
         # Creating a Unconfirmed_transactions object with transaction (tx) as an attribute
-        new_transaction = Unconfirmed_transactions(tx.inputs, tx.outputs,
+        new_transaction = Unconfirmed_Transactions(tx.inputs, tx.outputs,
                                                    tx.signature, tx.transaction_id)
         database.add_element(new_transaction)
         db.session.commit()
@@ -199,8 +193,7 @@ class Database:
 # Templates is the template folder containing all the html/css
 app = Flask(__name__, template_folder="templates")
 
-# Initialize the Blockchain object
-blockchain = Blockchain()
+# Initialize the Database object
 database = Database()
 
 # Our application's configurations:
@@ -237,16 +230,16 @@ class Block_data(db.Model):
     transactions = Column('transactions', String)
     timestamp = Column('timestamp', Integer)
     previous_hash = Column('previous_hash', String)
-    nonce = Column('nonce', Integer)
     hash = Column('hash', String)
+    nonce = Column('nonce', Integer)
 
-    def __init__(self, index, transactions, timestamp, previous_hash, nonce, hash):
+    def __init__(self, index, transactions, timestamp, previous_hash, block_hash, nonce):
         self.index = index
         self.transactions = transactions
         self.timestamp = timestamp
         self.previous_hash = previous_hash
+        self.hash = block_hash
         self.nonce = nonce
-        self.hash = hash
 
 
 # Nodes_data Class with it's basic attributes
@@ -273,11 +266,8 @@ class Nodes_data(db.Model):
         self.pending_money_amount = pending_money_amount
 
 
-# Confirmed Transactions Class with it's basic attributes
-# id is an obligatory attribute set by the database
-# we have the serialized transaction object
-class Transactions(db.Model):
-    __tablename__ = "Transactions"
+class Transactions_Model(db.Model):
+    __abstract__ = True
     id = Column('id', Integer, primary_key=True)
     inputs = Column('inputs', String)
     outputs = Column('outputs', String)
@@ -289,24 +279,20 @@ class Transactions(db.Model):
         self.outputs = outputs
         self.signature = signature
         self.transaction_id = transaction_id
+
+
+# Confirmed Transactions Class with it's basic attributes
+# id is an obligatory attribute set by the database
+# we have the serialized transaction object
+class Transactions(Transactions_Model):
+    __tablename__ = "Transactions"
 
 
 # Unconfirmed transaction Class with it's basic attributes
 # id is an obligatory attribute set by the database
 # we have the serialized transaction object
-class Unconfirmed_transactions(db.Model):
-    __tablename__ = "Unconfirmed_transactions"
-    id = Column('id', Integer, primary_key=True)
-    inputs = Column('inputs', String)
-    outputs = Column('outputs', String)
-    signature = Column('signature', String)
-    transaction_id = Column('transaction_id', String)
-
-    def __init__(self, inputs, outputs, signature, transaction_id):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.signature = signature
-        self.transaction_id = transaction_id
+class Unconfirmed_Transactions(Transactions_Model):
+    __tablename__ = "Unconfirmed_Transactions"
 
 
 ''' Warning: the following if statement will launch an error
@@ -323,9 +309,7 @@ class Unconfirmed_transactions(db.Model):
 # If statement that checks if the Block_data table is empty
 # and creates the genesis block if it's empty
 if not db.session.query(Block_data).all():
-    database.add_element(blockchain.create_genesis_block())
-    db.session.commit()
-    db.session.close()
+    database.add_element(Block.create_genesis_block())
 '''*'''
 
 
@@ -374,18 +358,20 @@ def register_node():
         name = request.form['Name'].strip()
         password = request.form['Psw'].strip()
         password_repeat = request.form['Psw-repeat'].strip()
-        node_list = database.get_nodes()
+        last_node = database.get_last_node()
 
         if password == password_repeat:
 
             # Creating a node class object
-            number_of_node = len(node_list) + 1
-            timestamp = time.time()
+            if last_node:
+                number_of_node = last_node.id + 1
+            else:
+                number_of_node = 0
 
             # Initialising the node object with node id set at 0
-            node = Node(0, number_of_node, timestamp, 100, b'', password, 0, 0)
+            node = Node(number_of_node, 0, time.time(), 100, b'', password, 0, 0)
             # Calculating the node id
-            node.compute_node_id(name, number_of_node, timestamp)
+            node.compute_node_id(name, number_of_node, node.timestamp)
 
             # Creating a node_data class object
             # and adding it to the database
@@ -627,7 +613,7 @@ def home():
                     # Adding the new transaction to the Unconfirmed_Transactions table in the database
                     database.add_unconfirmed_transactions(transaction)
 
-                    session['transactions'].append(outputs)
+                    session['transactions'].append(transaction.transaction_id[:20])
 
                     # Updating all the node's newest_chain_copy values in the database
                     database.change_chain_copy_status_all()
@@ -656,5 +642,3 @@ def home():
 # as you to view the app and interact with the blockchain (create user, send transaction ...)
 if __name__ == '__main__':
     app.run(host="0.0.0.0")
-
-
