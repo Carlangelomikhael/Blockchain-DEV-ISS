@@ -1,3 +1,4 @@
+import json
 import pickle
 import socket
 import os
@@ -14,7 +15,7 @@ args = parser.parse_args()
 vars_dict = vars(args)
 
 # Connecting to existing database
-conn = sqlite3.connect('database.db')
+conn = sqlite3.connect('test.db')
 
 # The cursor allow us to execute SQL commands
 c = conn.cursor()
@@ -36,17 +37,14 @@ class Block:
     def compute_hash(self):
         # json.dumps => Converts a Python object into a json string
         # self.__dict__ => all attributes defined for the object Block
-        block_string = b''
-        block_string += (str(self.index)).encode()
-        block_string += self.transaction.encode()
-        block_string += (str(self.timestamp)).encode()
-        block_string += self.previous_hash.encode()
-        block_string += (str(self.nonce)).encode()
+        # json.dumps => Converts a Python object into a json string
+        # self.__dict__ => all attributes defined for the object Block
+        block_string = json.dumps(self.__dict__)
 
         # encode() => Encode the json string
         # sha256() => Hash it with sha256
         # hexdigest() => Returns the encoded data in hexadecimal format
-        return (sha256(block_string)).hexdigest()
+        return (sha256(block_string.encode())).hexdigest()
 
 
 # send/receive 4096 bytes each time
@@ -85,7 +83,7 @@ def login():
     message = s.recv(BUFFER_SIZE).decode()
     print(message)
     if message == 'Logged in':
-        update_blockchain_copy()
+        # update_blockchain_copy()
         node_choice()
 
 
@@ -182,12 +180,14 @@ def send_public_key(file_path):
             # we use sendall to assure transmission in
             # busy networks
             s.sendall(bytes_read)
+    node_choice()
 
 
 def recv_block_data():
     message = s.recv(BUFFER_SIZE).decode()
     if message == 'No transactions to mine':
         print(message)
+        node_choice()
     else:
         mine(message.split(SEPARATOR))
 
@@ -200,9 +200,9 @@ def mine(block_list):
     while not block_hash.startswith('0' * 5):
         block.nonce += 1
         block_hash = block.compute_hash()
-        '''print(block_hash)'''
 
     s.send(block_hash.encode())
+    node_choice()
 
 
 def close_connection():
@@ -210,5 +210,3 @@ def close_connection():
 
 
 login()
-conn.close()
-
