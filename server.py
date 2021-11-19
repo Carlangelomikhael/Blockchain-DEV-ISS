@@ -1,8 +1,10 @@
+import json
 import socket
 from hashlib import sha256
 import sqlite3
 import time
 from _thread import *
+from app import Node, Transactions
 
 # local host IP address
 SERVER_HOST = "0.0.0.0"
@@ -13,7 +15,7 @@ BUFFER_SIZE = 4096
 SEPARATOR = "<SEPARATOR>"
 
 # Connecting to existing database
-conn = sqlite3.connect('database.db', check_same_thread=False)
+conn = sqlite3.connect('test.db', check_same_thread=False)
 
 # The cursor allow us to execute SQL commands
 c = conn.cursor()
@@ -35,64 +37,106 @@ s.listen(5)
 print(f"[*] Listening as {SERVER_HOST}:{SERVER_PORT}")
 
 
-def update_pubkey(name, pubkey):
+def update_pubkey(node_id, pubkey):
     with conn:
         c.execute("""UPDATE Nodes SET pubkey = :pubkey
-        WHERE name = :name""",
-                  {'pubkey': pubkey, 'name': name})
+        WHERE node_id = :node_id""",
+                  {'pubkey': pubkey, 'node_id': node_id})
 
 
-def get_tx_id():
-    c.execute("SELECT * FROM Unconfirmed_Transactions WHERE transaction_id=:transaction_id", {'transaction_id': name})
-    return c.fetchall()
+def add_conf_tx(tx):
+    with conn:
+        c.execute(
+            "INSERT INTO Transactions VALUES (:id, :inputs, :outputs, :signature, :transaction_id)",
+            {'id': tx.id, 'inputs': tx.inputs, 'outputs': tx.outputs, 'signature': tx.signature,
+             'transaction_id': tx.transaction_id})
 
 
-def update_money_sender():
+def get_tx(transaction_id):
+    c.execute("SELECT * FROM Transactions WHERE transaction_id=:transaction_id",
+              {'transaction_id': transaction_id})
+    t = c.fetchall()[0][1:]
+    return Transactions(*t)
+
+
+def get_last_tx_index():
+    c.execute("SELECT * FROM Transactions ORDER BY ID DESC LIMIT 1")
+    try:
+        return c.fetchall()[0][4]
+    except IndexError:
+        return 0
+
+
+def get_pending_amount(node_id):
+    return get_node(node_id).pending_money_amount
+
+
+def get_money(node_id):
+    return get_node(node_id).money_amount
+
+
+def update_money(tx):
     with conn:
         c.execute("""UPDATE Nodes SET pending_money_amount = :pending_money_amount
-        WHERE name = :name""",
-                  {'pending_money_amount': 0, 'name': name})
+        WHERE node_id = :node_id""",
+                  {'pending_money_amount': get_pending_amount(json.loads(tx.outputs)["sender"]) - 1.05 *
+                                           json.loads(tx.outputs)["amount"],
+                   'node_id': json.loads(tx.outputs)["sender"]})
+
+        c.execute("""UPDATE Nodes SET money_amount = :money_amount
+        WHERE node_id = :node_id""",
+                  {'money_amount': get_money(json.loads(tx.outputs)["receiver"]) + json.loads(tx.outputs)["amount"],
+                   'node_id': json.loads(tx.outputs)["receiver"]})
+
+        c.execute("""UPDATE Nodes SET money_amount = :money_amount
+        WHERE node_id = :node_id""",
+                  {'money_amount': get_money(node_id) + 0.05 * json.loads(tx.outputs)["amount"], 'node_id': node_id})
 
 
-def get_node(name):
-    c.execute("SELECT * FROM Nodes WHERE name=:name", {'name': name})
-    return c.fetchall()
+def get_node(node_id):
+    c.execute("SELECT * FROM Nodes WHERE node_id=:node_id", {'node_id': node_id})
+    return Node(*c.fetchall()[0])
 
 
 def get_unconf_tx():
     c.execute("SELECT * FROM Unconfirmed_Transactions LIMIT 1")
-    return c.fetchall()
+    try:
+        t = c.fetchall()[0][1:]
+        return Transactions(*t)
+    except IndexError:
+        return 0
 
 
 def get_last_block():
     c.execute("SELECT * FROM Blocks ORDER BY ID DESC LIMIT 1")
-    return c.fetchall()
+    return c.fetchall()[0]
 
 
-def insert_block(index, transaction, timestamp, previous_hash, nonce, hash):
+def insert_block(index, tx, timestamp, previous_hash, nonce, hash):
     with conn:
         c.execute(
-            "INSERT INTO Blocks VALUES (:id, :index, :transaction, :timestamp, :previous_hash, :nonce, :hash)",
-            {'id': index - 1, 'index': index, 'transaction': transaction, 'timestamp': timestamp,
+            "INSERT INTO Blocks VALUES (:id, :index, :transactions, :timestamp, :previous_hash, :nonce, :hash)",
+            {'id': index + 1, 'index': index, 'transactions': tx, 'timestamp': timestamp,
              'previous_hash': previous_hash, 'nonce': nonce, 'hash': hash})
 
 
-def delete_conf_tx(id):
+def delete_conf_tx(transaction_id):
     with conn:
-        c.execute("DELETE from Unconfirmed_Transactions WHERE id = :id",
-                  {'id': id})
+        c.execute("DELETE from Unconfirmed_Transactions WHERE transaction_id = :transaction_id",
+                  {'transaction_id': transaction_id})
+        conn.commit()
 
 
 def login():
-    if sha256(password.encode()).hexdigest() == node_data[0][5]:
+    if sha256(password.encode()).hexdigest() == node_data.password:
         # Logged in message sent to the node
         node_socket.send('Logged in'.encode())
-        check_blockchain_copy()
+        # check_blockchain_copy()
         choice()
 
 
 def check_blockchain_copy():
-    if node_data[0][6] == 0:
+    if node_data.newest_chain_copy == 0:
         message = 'Your blockchain copy is not up to date' \
                   ' please specify the path where the copy is saved'
         node_socket.send(message.encode())
@@ -127,7 +171,7 @@ def choice():
 
 
 def set_public_key():
-    if type(node_data[0][4]) == bytes:
+    if len(node_data.pubkey) != 0:
         node_socket.send('You can\'t change your public key'.encode())
         choice()
     else:
@@ -145,15 +189,15 @@ def set_public_key():
             break
         pubkey += bytes_read
 
-    update_pubkey(name, pubkey)
+    update_pubkey(node_id, pubkey)
 
 
 def mine():
     if transaction:
-        block_index = block[0][1] + 1
-        block_transaction = transaction[0][1]
+        block_index = block[1] + 1
+        block_transaction = transaction.transaction_id
         block_timestamp = time.time()
-        block_previous_hash = block[0][4]
+        block_previous_hash = block[4]
         block_nonce = 0
 
         block_data_list = [block_index, block_transaction, block_timestamp, block_previous_hash, block_nonce]
@@ -174,18 +218,19 @@ def mine():
 
         insert_block(block_index, block_transaction, block_timestamp, block_previous_hash, block_nonce, block_hash)
         conf_tx = get_unconf_tx()
-        delete_conf_tx(conf_tx[0][0])
+        add_conf_tx(conf_tx)
+        delete_conf_tx(conf_tx.transaction_id)
+
+        update_money(get_tx(block_transaction))
 
     else:
         node_socket.send('No transactions to mine'.encode())
-        close_connection()
+        choice()
 
 
 def close_connection():
     # close the client socket
     node_socket.close()
-    # close the server socket
-    s.close()
 
 
 while True:
@@ -195,11 +240,12 @@ while True:
     print(f"[+] {address} is connected.")
 
     # Saving the name and password sent by the node
-    name, password = node_socket.recv(BUFFER_SIZE).decode().split(SEPARATOR)
+    node_id, password = node_socket.recv(BUFFER_SIZE).decode().split(SEPARATOR)
 
-    node_data = get_node(name)
+    # Querying the node from the database filtered by id
+    node_data = get_node(node_id)
 
-    # Querying the Unconfirmed Transactions table
+    # Querying the first Unconfirmed Transaction from the database
     transaction = get_unconf_tx()
 
     # Querying the Blocks table
