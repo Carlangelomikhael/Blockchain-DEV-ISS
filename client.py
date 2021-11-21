@@ -92,13 +92,6 @@ def update_blockchain_copy():
     if message == 'Your blockchain copy is not up to date please specify the path where the copy is saved':
 
         print(message)
-        path = input()
-
-        # Querying the Unconfirmed Transactions table
-
-        # Querying the Nodes table
-
-        # Querying the Blocks table
 
         s.send('done'.encode())
         message = s.recv(BUFFER_SIZE).decode()
@@ -180,7 +173,6 @@ def send_public_key(file_path):
             # we use sendall to assure transmission in
             # busy networks
             s.sendall(bytes_read)
-    node_choice()
 
 
 def recv_block_data():
