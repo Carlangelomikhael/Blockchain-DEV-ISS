@@ -177,19 +177,20 @@ def set_public_key():
     else:
         node_socket.send('1'.encode())
 
-    pubkey = b''
+        pubkey = b''
 
-    # start receiving the public key and then adding it to the database
-    while True:
-        # read 1024 bytes from the socket (receive)
-        bytes_read = node_socket.recv(BUFFER_SIZE)
-        if not bytes_read:
-            # nothing is received
-            # file transmitting is done
-            break
-        pubkey += bytes_read
+        # start receiving the public key and then adding it to the database
+        while True:
+            # read 1024 bytes from the socket (receive)
+            bytes_read = node_socket.recv(BUFFER_SIZE)
+            if not bytes_read:
+                # nothing is received
+                # file transmitting is done
+                break
+            pubkey += bytes_read
 
-    update_pubkey(node_id, pubkey)
+        update_pubkey(node_id, pubkey)
+        choice()
 
 
 def mine():
