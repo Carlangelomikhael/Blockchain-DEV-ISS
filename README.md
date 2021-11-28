@@ -36,7 +36,7 @@ The server.py file is basically a server that has to be run on a machine, and no
 ### INSTRUCTIONS
 ------------
 #### -> The Flask App:
-After installing all the files you can run the [app.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/app.py) file and it will launch the flask app server on a random IP on port 5000. If you're on Pycharm's IDE your running console will look like this:
+After installing all the files, you can run the [app.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/app.py) file and it will launch the flask app server on a random IP on port 5000. If you're on Pycharm's IDE your running console will look like this:
 
 ![running console](https://user-images.githubusercontent.com/88195134/143781704-52e153ca-4b1b-4c47-95e3-bdfe4cfcbac9.png)
 You can click on **http://<i></i>192.168.0.111:5000/** or you can open your web browser and insert it in the search tab and the home page will pop up:
@@ -52,7 +52,7 @@ If you are connected on *Wifi* check for the **Wireless LAN adapter Wi-Fi** sect
 * Open the [server.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/server.py) file and replace the `SERVER_HOST` variable in line *10* with your **IPv4 Address**.
 * Open the [client.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/client.py) file and replace the `host` variable in line *56* with your **IPv4 Address**.
 
-Now the server is ready, you can *execute* the file on your **IDE** or open your **CMD** in the directory of the files then type **python server.py** and press `Enter`:
+Now the server is ready, you can *execute* the file on your **IDE**, or open your **CMD** in the directory of the files then type **python server.py** and press `Enter`:
 
 ![running console](https://user-images.githubusercontent.com/88195134/143784939-34ba3a87-2c05-433e-90bc-ebde26a9a064.png)
 The **server** is listening as **192.168.0.111** on port **5001**.
