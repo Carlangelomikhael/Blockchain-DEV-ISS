@@ -11,10 +11,12 @@ from classes import Block, Database, Transaction
 serverHost = socket.gethostbyname(socket.gethostname())
 # Port to listen on
 serverPort = 50000
-
+# Minimum data size to be sent/received
 minBufferSize = 5
+# Seperator used by both parties to identify data
 SEPERATOR = "<SEPERATOR>"
 
+# Creates a database if non-existent
 if not os.path.exists("database.db"):
     init_database.main("database.db")
 
@@ -24,6 +26,7 @@ conn = sqlite3.connect('database.db', check_same_thread=False)
 # The cursor allow us to execute SQL commands
 c = conn.cursor()
 
+# Creating a Database instance
 database = Database(conn, c)
 
 # create the server socket
@@ -43,14 +46,19 @@ s.listen(5)
 print(f"[*] Listening as {serverHost}:{serverPort}")
 
 
+# Receive the node's wallet address
 def nodeLogin():
     length = receive(minBufferSize, "Int")
     print(receive(length, "String"))
 
 
+# Update the node's database if needed
 def updateDatabase():
+    # We got 4 tables in our database
     tableNames = ["Blocks", "Transactions", "Unconfirmed_Transactions", "UTXO"]
     for tableName in tableNames:
+        # For the Blocks and Transactions tables it's enough to check what index is last in the node's database
+        # Because no block or transaction will ever be deleted
         if tableName == "Blocks" or tableName == "Transactions":
             lastId = database.getLastObjectId(tableName)
             nodeSocket.send(toMinSize(toMinSize(str(lastId))).encode())
@@ -62,6 +70,9 @@ def updateDatabase():
                     length = len(pickledObject)
                     nodeSocket.send(toMinSize(str(length)).encode())
                     nodeSocket.send(pickledObject)
+
+        # For the other tables we need to check what indexes are present in the node's and server's database
+        # Then we compare the two resulting sets of indexes to see which objects are to be added/deleted
         else:
             set1 = pickle.dumps(set(database.getObjectIdList(tableName)))
             length = toMinSize(str(len(set1))).encode()
@@ -74,6 +85,7 @@ def updateDatabase():
             # Elements that are missing
             toAdd = pickle.loads(set1) - set2
 
+            # Sending the elements that needs to be added
             for elmnt in toAdd:
                 object = pickle.dumps(database.getObjectById(tableName, elmnt[0]))
                 length = toMinSize(str(len(object))).encode()
@@ -82,6 +94,7 @@ def updateDatabase():
 
 
 def mine():
+    # Sending info about the Genesis Block
     if database.emptyTable("Blocks"):
         block = Block(0, [], time.time(), "", "", 50, 0, 2)
         block.finalReward()
@@ -89,6 +102,7 @@ def mine():
         nodeSocket.send(length.encode())
         nodeSocket.send(pickle.dumps(block))
     else:
+        # Sending info about the next Block
         if not database.emptyTable("Unconfirmed_Transactions"):
             tx = database.getFirstObject("Unconfirmed_Transactions")
             index = database.getLastObjectId("Blocks") + 1
@@ -101,27 +115,36 @@ def mine():
             nodeSocket.send(length.encode())
             nodeSocket.send(pickle.dumps(block))
         else:
+            # No Block available for mining
             msg = "0"
             nodeSocket.send(toMinSize(msg).encode())
             return False
 
+    # Waiting to see if the node wants to mine the block
     request = receive(minBufferSize, "Int")
+    # Receiving the block's hash then adding the Block to the database
     if request == 1:
         length = receive(minBufferSize, "Int")
         block = receive(length, "Object")
         database.addObject(block)
         nodeSocket.send(toMinSize("100").encode())
+        # Adding the transactions that are in the block to the database
         for tx in block.transactions:
             database.addObject(tx)
+            # If the transaction type is 2 it means that's a regular transaction from node to node
+            # We remove it from the Unconfirmed_Transactions table and add the outputs that are in the tx
             if tx.type == 2:
                 database.removeObject(database.getFirstObject("Unconfirmed_Transactions"))
                 for output in tx.outputs:
                     database.addObject(output)
+            # If the transaction type is 1 it means that's a transaction made to reward the miner for mining the block
+            # Then w add the outputs that are in the tx
             elif tx.type == 1:
                 for output in tx.outputs:
                     database.addObject(output)
 
 
+# Function that is always listening to the node and acts depending on the request made
 def waiting():
     request = receive(minBufferSize, "Int")
     if request is not None:
@@ -135,6 +158,7 @@ def waiting():
             close()
 
 
+# Function that transform any given string which length is < to the minimum buffer size to the minimum size
 def toMinSize(string):
     while len(string) < minBufferSize:
         string += " "
@@ -159,15 +183,19 @@ def transaction():
         else:
             valid = False
 
+    # If the tx is valid we add it to the database and signal the node to do so
     if valid:
         database.addObject(tx)
         nodeSocket.send(toMinSize("100").encode())
 
 
+# Function that closes the connection to the node
 def close():
     nodeSocket.close()
 
 
+# This function is made to be able to handle errors whilst receiving data from the node
+# For example if we are receiving data and the node disconnects in the process the server won't crash
 def receive(length, type):
     if type == "Object":
         try:
@@ -198,6 +226,7 @@ def receive(length, type):
             close()
 
 
+# Loop that will keep the server going indefinitely and accept node connections
 while True:
     nodeSocket, address = s.accept()
 
