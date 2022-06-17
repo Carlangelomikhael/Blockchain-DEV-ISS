@@ -6,8 +6,6 @@ import KeysGeneration
 
 
 # Block Class with it's basic attributes
-# We have the block's index, transaction (between nodes) , timestamp (when it was created)
-# the hash of the previous block and the nonce (number used once)
 class Block:
     def __init__(self, index, transactions, timestamp, previousHash, blockHash, reward, nonce, difficulty):
         self.id = index
@@ -31,6 +29,7 @@ class Block:
         # hexdigest() => Returns the encoded data in hexadecimal format
         return (sha256(blockString)).hexdigest()
 
+    # Function that mines the block by calling the computeHash function until it the resulting hash satisfies the block's difficulty
     def mine(self, wallet):
         self.transactions.append(wallet.constructCoinbaseTx(50, wallet.address, None))
         blockHash = self.computeHash()
@@ -41,11 +40,13 @@ class Block:
         self.objectDesc.setDatabaseValues(self.__dict__)
         return blockHash
 
+    # Function that calculates the block's reward
     def finalReward(self):
         for tx in self.transactions:
             self.reward += tx.fees
 
 
+# Input Class that is stored in the inputs attribute of the Transaction class
 class Input:
     def __init__(self, value, address, prevTxId, lockingScript, scriptSig):
         self.value = value
@@ -55,6 +56,7 @@ class Input:
         self.scriptSig = scriptSig
 
 
+# Output Class that is stored in the outputs attribute of the Transaction class
 class Output:
     def __init__(self, index, value, address, transactionId, lockingScript):
         self.id = index
@@ -67,9 +69,7 @@ class Output:
         self.objectDesc.setDatabaseValues(self.__dict__)
 
 
-# Transaction Class with it's basic attributes
-# the transactions inputs and outputs
-# the sender signature of the transaction and the transaction ids
+# Transaction Class that is stored in the transactions attribute of the Block class
 class Transaction:
     def __init__(self, index=None, type=None, inputs=None, outputs=None, timestamp=time.time(), transactionId="",
                  fees=None):
@@ -101,14 +101,17 @@ class Transaction:
         self.objectDesc.setDatabaseValues(self.__dict__)
         return self.transactionId
 
+    # Function that adds an input to the tx
     def addInput(self, input):
         self.inputs.append(input)
         self.objectDesc.setDatabaseValues(self.__dict__)
 
+    # Function that adds an output to the tx
     def addOutput(self, output):
         self.outputs.append(output)
         self.objectDesc.setDatabaseValues(self.__dict__)
 
+    # Function that calculates the tx fees
     def calculateFees(self):
         self.fees = 0
         for input in self.inputs:
@@ -116,6 +119,7 @@ class Transaction:
         self.objectDesc.setDatabaseValues(self.__dict__)
 
 
+# UnconfirmedTransaction class that inherits from the Transaction class
 class UnconfirmedTransaction(Transaction):
     def __init__(self, index=None, type=None, inputs=None, outputs=None, timestamp=time.time(), transactionId="",
                  fees=None):
@@ -123,6 +127,8 @@ class UnconfirmedTransaction(Transaction):
         self.objectDesc.databaseTableName = 'Unconfirmed_Transactions'
 
 
+# ObjectDesc Class that is stored as an attribute in every class
+# This class enables the use of a single function to add/remove/update any object regardless of it's type
 class ObjectDesc:
     def __init__(self, databaseTableName, databaseColumnNames, databaseValues, distinctAttrib, toPickleAttrib):
         self.databaseTableName = databaseTableName
@@ -131,12 +137,14 @@ class ObjectDesc:
         self.distinctAttrib = distinctAttrib
         self.toPickleAttrib = toPickleAttrib
 
+    # Function that changes the instance's attributes
     def setDatabaseValues(self, dict):
         for attrib in dict:
             if attrib != "objectDesc":
                 self.databaseValues[attrib] = dict[attrib]
 
 
+# Wallet class that stores the node's wallet info as his address, public/private keys, etc...
 class Wallet:
     def __init__(self, database):
         try:
@@ -149,14 +157,18 @@ class Wallet:
         self.privkey = SigningKey.from_pem(open("Keys\\PrivateKey.pem").read())
         self.amount = self.balance()
 
+    # Function that calculates the wallet's balance
     def balance(self):
         self.amount = 0
+        # Getting the utxos that are owned by the wallet's address
         utxos = self.database.getUtxoList(self.address)
+        # Adding all the utxos values
         if utxos:
             for i in range(0, len(utxos)):
                 self.amount += float(utxos[i].value)
         return self.amount
 
+    # Function that creates a normal tx (type 2)
     def constructTx(self, transactionSender, transactionReceiver, transactionAmount):
         # Checking of the sender has enough money or if the receiver address is valid
         if self.balance() < transactionAmount or len(transactionReceiver) != len(transactionSender):
@@ -190,21 +202,29 @@ class Wallet:
             transaction.objectDesc.setDatabaseValues(transaction.__dict__)
             return transaction
 
+    # Function that creates a coinbase tx (transaction that rewards the miner and its type is 1)
     def constructCoinbaseTx(self, amount, address, outScript):
+        # Creating the tx instance
         transaction = Transaction(self.database.getLastObjectId("Transactions") + 1, 1)
+        # Computing its id
         transaction.computeTxId()
+        # Creating the outputs then adding them to the transaction
         out = Output(self.database.getLastObjectId("UTXO") + 1, amount, address, transaction.transactionId, outScript)
         transaction.addOutput(self.createOutScript(out))
+
         transaction.calculateFees()
         transaction.objectDesc.setDatabaseValues(transaction.__dict__)
         return transaction
 
+    # Function that returns the signature of the private key
     def sign(self, script):
         return self.privkey.sign(script)
 
+    # Function that transforms an output instance to an input instance
     def outToIn(self, out):
         return Input(out.value, out.address, out.transactionId, out.lockingScript, self.sign(out.lockingScript))
 
+    # Function that creates the locking script of the output
     def createOutScript(self, out):
         SEPERATOR = "<SEPERATOR>".encode()
         outScript = self.pubkey.to_string() + SEPERATOR + str(
@@ -214,18 +234,19 @@ class Wallet:
         out.objectDesc.setDatabaseValues(out.__dict__)
         return out
 
+    # Function that returns the pending coins of the wallet
     def getPendingAmount(self, sender):
         return self.database.getPendingAmount(sender)
 
 
 # Database Class that queries,adds,deletes and updates any data desired
-# on our defined classes (Blocks,Nodes,Unconfirmed and Confirmed Transactions) in the database
+# on our defined classes (Blocks, UTXOS, Unconfirmed and Confirmed Transactions) in the database
 class Database:
     def __init__(self, connection, cursor):
         self.conn = connection
         self.c = cursor
 
-    # Function that gets last object id from the database
+    # Function that gets the last object id from the database
     def getLastObjectId(self, tableName):
         if self.emptyTable(tableName):
             return 0
@@ -233,6 +254,7 @@ class Database:
             self.c.execute("SELECT max(id) FROM {}".format(tableName))
             return self.c.fetchall()[0][0]
 
+    # Function that gets the first object id from the database
     def getFirstObjectId(self, tableName):
         if self.emptyTable(tableName):
             return 0
@@ -240,6 +262,7 @@ class Database:
             self.c.execute("SELECT min(id) FROM {}".format(tableName))
             return self.c.fetchall()[0][0]
 
+    # Function that checks if the table in argument is empty
     def emptyTable(self, tableName):
         self.c.execute("SELECT * FROM {};".format(tableName))
         if self.c.fetchall():
@@ -275,6 +298,7 @@ class Database:
         else:
             return None
 
+    # Function that transforms raw data to an object
     @staticmethod
     def rawToObject(tableName, rawData):
         if tableName == "Blocks":
@@ -287,10 +311,10 @@ class Database:
             tx = UnconfirmedTransaction(*rawData)
             return tx
         if tableName == "UTXO":
-            print(rawData)
             output = Output(*rawData)
             return output
 
+    # Function that sets an id to the object that won't create a conflict in the database
     def setObjectId(self, object):
         objectId = self.getLastObjectId(object.objectDesc.databaseTableName)
         object.id = objectId + 1
@@ -307,6 +331,7 @@ class Database:
                                                   object.objectDesc.databaseColumnNames),
                 object.objectDesc.databaseValues)
 
+    # Function that removes the designed object from the database
     def removeObject(self, object):
         distAttrib = object.objectDesc.distinctAttrib
         self.c.execute(
@@ -314,10 +339,12 @@ class Database:
             {'{}'.format(distAttrib): object.objectDesc.databaseValues[distAttrib]})
         self.conn.commit()
 
+    # Function that returns the first object in the designed table
     def getFirstObject(self, tableName):
         minId = self.getFirstObjectId(tableName)
         return self.getObjectById(tableName, minId)
 
+    # Function that returns a list of all UTXOS that have the designed address
     def getUtxoList(self, address):
         self.c.execute("SELECT * FROM UTXO WHERE address=:address", {'address': address})
         utxos = self.c.fetchall()
@@ -327,11 +354,13 @@ class Database:
                 utxoList.append(Output(*utxos[i]))
         return utxoList
 
+    # Function that returns the UTXO that have the designed locking script
     def getUtxoByScript(self, lockingScript):
         self.c.execute("SELECT * FROM UTXO WHERE lockingScript=:lockingScript", {'lockingScript': lockingScript})
         utxoId = self.c.fetchall()[0][0]
         return self.getObjectById("UTXO", utxoId)
 
+    # Function that returns the tx that have the designed tx id
     def getTxByTxId(self, transactionId):
         try:
             self.c.execute("SELECT * FROM Transactions WHERE transactionId=:transactionId",
@@ -347,6 +376,7 @@ class Database:
             except IndexError:
                 return None
 
+    # Function that returns a list of objects from the designed table
     def getObjectList(self, tableName):
         res = []
         self.c.execute("SELECT * FROM {}".format(tableName))
@@ -354,20 +384,24 @@ class Database:
             res.append(self.getObjectById(tableName, i[0]))
         return res
 
+    # Function that returns a list of ids from the designed table
     def getObjectIdList(self, tableName):
         self.c.execute("SELECT id FROM {}".format(tableName))
         return self.c.fetchall()
 
+    # Function that pickles all the attributes in the toPickleAttrib of the designed object
     @staticmethod
     def pickleObjectAttrib(object):
         for attrib in object.objectDesc.toPickleAttrib:
             object.objectDesc.databaseValues[attrib] = pickle.dumps(object.objectDesc.databaseValues[attrib])
 
+    # Function that unpickles all the attributes in the toPickleAttrib of the designed object
     @staticmethod
     def unpickleObjectAttrib(object):
         for attrib in object.objectDesc.toPickleAttrib:
             object.__dict__[attrib] = pickle.loads(object.objectDesc.databaseValues[attrib])
 
+    # Function that returns how many coins are pending
     def getPendingAmount(self, sender):
         pending = 0
         moneyIn = 0
@@ -383,6 +417,7 @@ class Database:
                     moneyIn += output.value
         return pending, moneyIn
 
+    # Function that searches for a Block or Tx with the designed parameter
     def search(self, param):
         try:
             p = int(param)
