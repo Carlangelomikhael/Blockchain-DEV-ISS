@@ -283,10 +283,11 @@ class Ui_HomeWindow(object):
         self.frame3_title.setText(_translate("HomeWindow", "Mining"))
         self.frame4_title.setText(_translate("HomeWindow", "Activity & Message Log"))
         self.search_label.setText(_translate("HomeWindow", "Search For Blocks or Transactions"))
-        self.init_var()
+        self.initVar()
         self.client.start()
 
-    def init_var(self):
+    # Function that initials the node's address, balance, pending coins
+    def initVar(self):
         pendingAmount = self.client.wallet.getPendingAmount(self.client.wallet.address)
         self.addr.setText(self.client.wallet.address)
         self.balance.setText(str(self.client.wallet.amount) + " ISS COINS")
@@ -299,6 +300,7 @@ class Ui_HomeWindow(object):
         receiver1 = self.addrInput1.text()
         receiver2 = self.addrInput2.text()
         amount = self.amountInput.text()
+        # Checking of the address typed in both boxes are similar and that the sender has enough funds
         if receiver1 == receiver2 and self.client.transact(sender, receiver1, amount) is not None:
             self.label.setText("- Transaction Issued. " + str(self.date()))
             self.addrInput1.clear()
@@ -309,12 +311,14 @@ class Ui_HomeWindow(object):
             self.label.setText("- Error while generating Transaction: \n"
                                "  No Enough Funds OR Address Mismatch " + str(self.date()))
 
+    # Function that determines whether the call to action is mining or requesting a block
     def switch(self):
         if self.mineButton.text() == "Mine":
             self.mine()
         else:
             self.request()
 
+    # Function that requests then display the block's info
     def request(self):
         self.label.setText("- Next Block Info Request. " + str(self.date()))
         block = self.client.blockInfo()
@@ -326,6 +330,7 @@ class Ui_HomeWindow(object):
             self.mineButton.setText("Mine")
             self.block = block
 
+    # Function that triggers the mining process then displays when it's done
     def mine(self):
         self.client.mine(self.block)
         self.mineButton.setText("Request")
@@ -336,6 +341,7 @@ class Ui_HomeWindow(object):
             .format(str(self.block.id)) + str(self.date()))
         self.refresh()
 
+    # Function that refreshes all displayed values
     def refresh(self):
         self.balance.setText(str(self.client.wallet.balance()) + " ISS COINS")
         pendingAmount = self.client.wallet.getPendingAmount(self.client.wallet.address)
@@ -343,31 +349,36 @@ class Ui_HomeWindow(object):
                                                                                                  pendingAmount[0] -
                                                                                                  pendingAmount[1]))
 
-    def openResWindow(self, res):
-        self.window = QtWidgets.QMainWindow()
-        self.ui = Ui_ResWindow()
-        self.ui.setupUi(self.window, res)
-        self.window.show()
-
+    # Function that minimizes the window
     @staticmethod
     def minimize():
         HomeWindow.showMinimized()
 
+    # Function that closes the window
     def close(self):
         self.client.close()
         HomeWindow.close()
 
+    # Function that gets the date in the format of h:m:s
     def date(self):
         now = datetime.datetime.now()
         res = str(now.hour) + ":" + str(now.minute) + ":" + str(now.second)
         return res
 
+    # Function that searches for the motif that was inputted
     def search(self):
         res = self.client.database.search(self.searchInput.text())
         if res is None:
             self.label.setText("- No Object found with the search parameter")
         else:
             self.openResWindow(res)
+
+    # Function that displays the resulting data from our search
+    def openResWindow(self, res):
+        self.window = QtWidgets.QMainWindow()
+        self.ui = Ui_ResWindow()
+        self.ui.setupUi(self.window, res)
+        self.window.show()
 
 
 class Ui_ResWindow(object):
@@ -411,12 +422,14 @@ class Ui_ResWindow(object):
         else:
             self.txRes()
 
+    # Function that displays the resulting block
     def blockRes(self):
         self.titleLabel.setText("Search Result in Blocks :")
         self.res.objectDesc.databaseValues["transactions"] = \
             pickle.loads(self.res.objectDesc.databaseValues["transactions"])[0].transactionId
         self.resLabel.setText(json.dumps(self.res.objectDesc.databaseValues, indent=1))
 
+    # Function that displays the resulting tx
     def txRes(self):
         self.titleLabel.setText("Search Result in Confirmed and Unconfirmed Transactions :")
         inputs = pickle.loads(self.res.objectDesc.databaseValues["inputs"])
