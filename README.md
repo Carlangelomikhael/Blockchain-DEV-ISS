@@ -56,24 +56,34 @@ The [init_database.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/b
   * classes.py
   * init_database.py
   * requirements.txt
-* Install the requirements with the steps described in [Requirements - Link](#Requirements)
-* Open your **CMD** and type ipconfig/all then enter:
 
-![CMD](https://user-images.githubusercontent.com/88195134/143783432-1ed1ae32-36d3-4588-962e-32724da0295c.png)           
-If you are connected on *Wifi* check for the **Wireless LAN adapter Wi-Fi** section and find your **IPv4 Address**, in the example above it's **192.168.0.111**. 
-* Open the [server.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/server.py) file and replace the `SERVER_HOST` variable in line *10* with your **IPv4 Address**.
-* Open the [client.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/client.py) file and replace the `host` variable in line *56* with your **IPv4 Address**.
+* Install the requirements.txt file with the steps described in [Requirements](#Requirements)
 
 Now the server is ready, you can *execute* the file on your **IDE**, or open your **CMD** in the directory of the files then type **python server.py** and press `Enter`:
 
-![running console](https://user-images.githubusercontent.com/88195134/143784939-34ba3a87-2c05-433e-90bc-ebde26a9a064.png)
-The **server** is listening as **192.168.0.111** on port **5001**.
+![running console](https://user-images.githubusercontent.com/88195134/174439195-62251362-dfd0-46d0-8a4f-5add2be53055.png)
+The **server** is listening as **192.168.56.1** on port **50000**.
 
 #### -> Client Connection:
-Open your **CMD** in the directory of the files then type **python server.py node_id password** and press `Enter`:
+* Create a folder that contains the following files:
+  * client.py
+  * classes.py
+  * init_database.py
+  * requirements.txt
+  * home.py
+  * welcome.py
+  * KeysGeneration.py
 
-![CMD](https://user-images.githubusercontent.com/88195134/143785802-90ca3b81-10ca-40ec-a54e-ae24af2442b4.png)
-You have 3 choices : you can set your **Public Key** and **Private Key**  ,**Mine** new blocks and **Close** the connection to the server.     
-**NB:** If you chose a service that is not **available** at the moment you'll get a message then you'll be able to remake a new choice. However if the service is available, upon completion the **connection to the server will end** and you have to reconnect if you need another service.
+* Install the requirements.txt file with the steps described in [Requirements](#Requirements)
 
+* In the case where you are running both **client** and **server** on the **same machine** you are ready to go:
+You can *execute* the file on your **IDE**, or open your **CMD** in the directory of the files then type **python welcome.py** and press `Enter`:
+The following window will appear, then press OK.
 
+![welcome window](https://user-images.githubusercontent.com/88195134/174439564-d5ccc3e3-4c19-43fb-a4dc-79b7b621b0e2.png)
+
+Then the **home** window will be displayed and you are connected to the server, you can now *transact*, *mine* and *search* for blocks and transactions.
+
+![home window](https://user-images.githubusercontent.com/88195134/174439759-2ae60d37-ef8b-4b40-8d1d-da7a6b748c47.png)
+
+* In the case where the **client** and **server** are on **different hosts** in the same **LAN**, all you have to do is to get the server's **IPv4 Address** and **Port** then set those variables in the **home.py** file https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/home.py#:~:text=%23%20The%20ip%20address,port%20%3D%2050000
