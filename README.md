@@ -18,9 +18,9 @@ This **Blockchain** ecosystem enables users to create wallets, transact with oth
 ### REQUIREMENTS
 ------------
 * [Python 3](https://www.python.org/downloads/)
-* Create a seperate directory on your device that will store all the client or server files
+* Create a seperate directory on your device that will store all the client or server files.
 * Install requirements.txt file:
-  * First Step: Place the file in the folder that you created earlier
+  * First Step: Place the file in the folder that you created earlier.
   * Second Step: Open your **CMD** and make sure the current **working** directory is the project's folder directory.
   * Third Step: Write ***pip install requirements.txt*** and then press the enter key.
   *Example*: If your project has this path **C:\Users\User\ISSCORE** then:
@@ -30,7 +30,7 @@ This **Blockchain** ecosystem enables users to create wallets, transact with oth
 ### OVERVIEW
 ------------
 [classes.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/classes.py) is the main file, it contains all the **Blockchain's** elements as Classes (Block,Transaction,Input,Output) in addition to that it contains the Wallet, ObjectDesc and Database Classes.
-* The **Block** Class contains 2 main methods: The **computeHash** function that calculates the hash of the current block instance and the **mine** function that utilizes the former function to reach thetarget nonce of the block.
+* The **Block** Class contains 2 main methods: The **computeHash** function that calculates the hash of the current block instance and the **mine** function that utilizes the former function to reach the target nonce of the block.
 * The **Transaction** Class contains 2 main methods: The **computeTxId** function that calculates the transaction id of the current transaction instance and the **calculateFees** function that calculates the fees of the transaction.
 * The **Input** and **Output** Classes have no methods, they are stored in the transaction instance and represents the inputs and outputs of the transaction.
 * The **Wallet** Class has several methods, the main ones are: The **balance** function that calculates the wallet's balance, the **constructTx** and **constructCoinbaseTx** functions that constructs 2 different types of transactions ( a normal peer-2-peer transaction and a reward transaction for the miner respectively) and the **sign** function that provides a private key signature.
