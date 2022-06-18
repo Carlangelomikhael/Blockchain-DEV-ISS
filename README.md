@@ -82,8 +82,8 @@ The following window will appear, then press OK.
 
 ![welcome window](https://user-images.githubusercontent.com/88195134/174439564-d5ccc3e3-4c19-43fb-a4dc-79b7b621b0e2.png)
 
-Then the **home** window will be displayed and you are connected to the server, you can now *transact*, *mine* and *search* for blocks and transactions.
+Then the **home** window will be displayed and you are connected to the server, you can now **transact*, *mine* and *search** for blocks and transactions.
 
 ![home window](https://user-images.githubusercontent.com/88195134/174439759-2ae60d37-ef8b-4b40-8d1d-da7a6b748c47.png)
 
-* In the case where the **client** and **server** are on **different hosts** in the same **LAN**, all you have to do is to get the server's **IPv4 Address** and **Port** then set those variables in the **home.py** file https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/home.py#:~:text=%23%20The%20ip%20address,port%20%3D%2050000
+* In the case where the **client** and **server** are on **different hosts** in the same **LAN**, all you have to do is to get the server's **IPv4 Address** and **Port** then set those variables in the **home.py** file: https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/home.py#:~:text=%23%20The%20ip%20address,port%20%3D%2050000 .
