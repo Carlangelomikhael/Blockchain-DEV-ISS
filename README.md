@@ -11,24 +11,31 @@
   
 ### INTRODUCTION
 ------------
-This project is a simple **Proof Of Work** [(POW)](https://www.investopedia.com/terms/p/proof-work.asp) [Blockchain](https://www.investopedia.com/terms/b/blockchain.asp) ecosystem built from scratch with **Python**.
+This project is a simple **Proof Of Work** [(POW)](https://www.investopedia.com/terms/p/proof-work.asp) [Blockchain](https://www.investopedia.com/terms/b/blockchain.asp) ecosystem with its wallet built from scratch with **Python**.
 Our main goal is to offer the basic services of a [Cryptocurrency](https://www.investopedia.com/terms/c/cryptocurrency.asp) in a [LAN](https://www.cisco.com/c/en/us/products/switches/what-is-a-lan-local-area-network.html).
-This **Blockchain** ecosystem enables users to create accounts, transact with other peers in their LAN and to participate in building the Blockchain by [mining](https://www.investopedia.com/tech/how-does-bitcoin-mining-work/) new Blocks. 
+This **Blockchain** ecosystem enables users to create wallets, transact with other peers in their LAN and to participate in building the Blockchain by [mining](https://www.investopedia.com/tech/how-does-bitcoin-mining-work/) new Blocks. 
 
 ### REQUIREMENTS
 ------------
 * [Python 3](https://www.python.org/downloads/)
+* Create a seperate directory on your device that will store all the client or server files
 * Install requirements.txt file:
-  * First Step: Open your **CMD** and make sure the **working** directory is the project's folder directory.
-  * Second Step: Write ***pip install requirements.txt*** and the enter.
-  *Example*: If your project has this path **C:\Users\User\Blockchain** then:
+  * First Step: Place the file in the folder that you created earlier
+  * Second Step: Open your **CMD** and make sure the current **working** directory is the project's folder directory.
+  * Third Step: Write ***pip install requirements.txt*** and then press the enter key.
+  *Example*: If your project has this path **C:\Users\User\ISSCORE** then:
   ```bash
-  C:\Users\User\Blockchain>pip install requirements.txt
+  C:\Users\User\ISSCORE>pip install requirements.txt
   ```
 ### OVERVIEW
 ------------
-[app.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/app.py) is the main file, it contains all the **Blockchain's** elements (Blocks,Nodes,Transactions) and implements the *majority* of the functionalities we need 
-like the interface (made with [Flask](https://flask.palletsprojects.com/en/2.0.x/)) that **nodes** visit to signup or login to their **wallet** that enables them to transact, check the Blocks already mined and the unconfirmed transactions.
+[classes.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/classes.py) is the main file, it contains all the **Blockchain's** elements as Classes (Block,Transaction,Input,Output) in addition to that it contains the Wallet, ObjectDesc and Database Classes.
+* The **Block** Class contains 2 main methods: The **computeHash** function that calculates the hash of the current block instance and the **mine** function that utilizes the former function to reach thetarget nonce of the block.
+* The **Transaction** Class contains 2 main methods: The **computeTxId** function that calculates the transaction id of the current transaction instance and the **calculateFees** function that calculates the fees of the transaction.
+* The **Input** and **Output** Classes have no methods, they are stored in the transaction instance and represents the inputs and outputs of the transaction.
+* The **Wallet** Class has several methods, the main ones are: The **balance** function that calculates the wallet's balance, the **constructTx** and **constructCoinbaseTx** functions that constructs 2 different types of transactions ( a normal peer-2-peer transaction and a reward transaction for the miner respectively) and the **sign** function that provides a private key signature.
+* The **Database** Class is conceived to make it easy for us to insert/remove/update/query objects from our database.
+* The **ObjectDesc** Class is stored as an attribute in every class, it provides an object description for every instance. This class enables the use of a single function to add/remove/update any object regardless of it's type.
 
 The [server.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/server.py) and [client.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/client.py) files are required in order too generate *public* and *private* [**RSA**](https://stuvel.eu/python-rsa-doc/) key pairs (without the keys you **won't** be able to transact) and it allows *registered* nodes to participate in the **mining** process.
 The server.py file is basically a server that has to be run on a machine, and nodes from the same LAN can connect to it by running the client.py file on their machines.
