@@ -56,7 +56,7 @@ The [init_database.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/b
   * classes.py
   * init_database.py
   * requirements.txt
-* Install the requirements with the steps described in 	[Markdown - Link](#Link)
+* Install the requirements with the steps described in [Requirements - Link](#Requirements)
 * Open your **CMD** and type ipconfig/all then enter:
 
 ![CMD](https://user-images.githubusercontent.com/88195134/143783432-1ed1ae32-36d3-4588-962e-32724da0295c.png)           
