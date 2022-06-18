@@ -50,16 +50,13 @@ The [init_database.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/b
 
 ### INSTRUCTIONS
 ------------
-#### -> The Flask App:
-After installing all the files, you can run the [app.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/app.py) file and it will launch the flask app server on a random IP on port 5000. If you're on Pycharm's IDE your running console will look like this:
-
-![running console](https://user-images.githubusercontent.com/88195134/143781704-52e153ca-4b1b-4c47-95e3-bdfe4cfcbac9.png)
-You can click on **http://<i></i>192.168.0.111:5000/** or you can open your web browser and insert it in the search tab and the home page will pop up:
-
-![Home page](https://user-images.githubusercontent.com/88195134/143782155-24f006d6-5e51-4312-bd1d-5fbd2308da0e.png)
-Now anyone on your **LAN** can access this page and interact (signup/login/transact...) by typing **http://<i></i>192.168.0.111:5000/** in their web browser.
-
 #### -> The Server:
+* Create a folder that contains the following files:
+  * server.py
+  * classes.py
+  * init_database.py
+  * requirements.txt
+* Install the requirements with the steps described in 	[Markdown - Link](#Link)
 * Open your **CMD** and type ipconfig/all then enter:
 
 ![CMD](https://user-images.githubusercontent.com/88195134/143783432-1ed1ae32-36d3-4588-962e-32724da0295c.png)           
