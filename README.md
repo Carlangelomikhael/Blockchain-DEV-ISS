@@ -37,8 +37,16 @@ This **Blockchain** ecosystem enables users to create wallets, transact with oth
 * The **Database** Class is conceived to make it easy for us to insert/remove/update/query objects from our database.
 * The **ObjectDesc** Class is stored as an attribute in every class, it provides an object description for every instance. This class enables the use of a single function to insert/remove/update/query any object regardless of it's type.
 
-The [server.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/server.py) and [client.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/client.py) files are required in order too generate *public* and *private* [**RSA**](https://stuvel.eu/python-rsa-doc/) key pairs (without the keys you **won't** be able to transact) and it allows *registered* nodes to participate in the **mining** process.
-The server.py file is basically a server that has to be run on a machine, and nodes from the same LAN can connect to it by running the client.py file on their machines.
+The [server.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/server.py) file is basically a server that has to be run on a machine, and nodes from the same LAN can connect to it by running the [client.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/client.py) file on their machines.
+The client and server exhanges data through TCP sockets, the server will send all the updates made on the database to the node once its connected.
+
+The [KeysGeneration.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/KeysGeneration.py) file contains 2 main functions: The **generate** function that generates the wallet's **Public and Private Keys**, the **pubkeyToAddr** function that transforms a pubkey to a valid **BTC** address.
+
+The [home.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/home.py) contains the **main window** that the node will operate on and the **result window** that displays results based on our research criteria.
+
+The [welcome.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/welcome.py) is the **welcome window** displayed only the first time the node wants to connect.
+
+The [init_database.py](https://github.com/Carlangelomikhael/Blockchain-Dev-Iss/blob/main/init_database.py) is the file that will create the initial database with all the tables.
 
 ### INSTRUCTIONS
 ------------
